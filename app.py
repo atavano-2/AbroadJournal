@@ -3,7 +3,7 @@ import streamlit as st
 
 st.set_page_config(page_title="Emily's Abroad Journal", layout = "centered")
 
-st.title("Abroad Journal")
+st.title("Emily's Travel Journal")
 st.write("Follow along with my adventures abroad!")
 
 POSTS_DIR = "posts"
