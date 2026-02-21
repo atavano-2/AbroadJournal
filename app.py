@@ -318,6 +318,7 @@ st.markdown('<div class="hero-title">Emily’s Travel Journal</div>', unsafe_all
 st.markdown('<p class="hero-sub">Follow along with my adventures abroad</p>', unsafe_allow_html=True)
 
 # ---------------------------
+# ---------------------------
 # Admin: New post form (optional, lives on home)
 # ---------------------------
 if st.session_state.is_admin and st.session_state.view == "home":
@@ -327,9 +328,17 @@ if st.session_state.is_admin and st.session_state.view == "home":
       new_date = st.date_input("Date", value=date.today())
       new_location = st.text_input("Location (optional)")
       new_tags = st.text_input("Tags (comma separated)", placeholder="food, museum, friends")
-      
-      cover_file = st.file_uploader("Cover photo (optional)", type=["png","jpg","jpeg","webp"])
-      gallery_files = st.file_uploader("Gallery photos (optional)", type=["png","jpg","jpeg","webp"], accept_multiple_files=True)
+
+      cover_file = st.file_uploader(
+        "Cover photo (optional)",
+        type=["png", "jpg", "jpeg", "webp"]
+      )
+      gallery_files = st.file_uploader(
+        "Gallery photos (optional)",
+        type=["png", "jpg", "jpeg", "webp"],
+        accept_multiple_files=True
+      )
+
       new_content = st.text_area("Content", height=220)
 
       c1, c2 = st.columns(2)
@@ -341,12 +350,13 @@ if st.session_state.is_admin and st.session_state.view == "home":
       if save_draft or publish:
         new_cover = upload_to_bucket(cover_file, folder="covers") if cover_file else ""
 
-gallery_urls = []
-if gallery_files:
-  for f in gallery_files:
-    gallery_urls.append(upload_to_bucket(f, folder="gallery"))
+        gallery_urls = []
+        if gallery_files:
+          for f in gallery_files:
+            gallery_urls.append(upload_to_bucket(f, folder="gallery"))
 
-new_gallery = ", ".join([u for u in gallery_urls if u])
+        new_gallery = ", ".join([u for u in gallery_urls if u])
+
         payload = {
           "id": str(uuid.uuid4()),
           "date": str(new_date),
@@ -358,31 +368,10 @@ new_gallery = ", ".join([u for u in gallery_urls if u])
           "gallery_image_urls": new_gallery,
           "is_published": bool(publish),
         }
+
         sb_admin.table(TABLE_NAME).insert(payload).execute()
         st.success("Saved ✅")
         st.rerun()
-
-# ---------------------------
-# Views
-# ---------------------------
-if st.session_state.view == "post":
-  # Find the selected post from our loaded list
-  selected = next((p for p in posts if p.get("id") == st.session_state.selected_id), None)
-
-  if not selected:
-    st.warning("That post isn't available (it may be a draft, or was removed).")
-    if st.button("← Back"):
-      back_home()
-  else:
-    if st.button("← Back to home"):
-      back_home()
-
-    st.markdown(f'<div class="post-title">{selected.get("title") or "(untitled)"}</div>', unsafe_allow_html=True)
-    st.markdown(f'<div class="post-meta">{post_meta_line(selected)}</div>', unsafe_allow_html=True)
-
-    cover = get_cover_url(selected)
-    if cover:
-      st.image(cover, use_container_width=True)
 
     # Content
     st.markdown(selected.get("content") or "")
