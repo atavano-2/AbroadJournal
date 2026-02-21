@@ -38,7 +38,7 @@ with st.sidebar:
     if not st.session_state.is_admin:
         pw = st.text_input('Admin Password', type= 'password')
         if st.button("Log in"):
-            if pw == st.secrets['ADMIN PASSWORD']:
+            if pw == st.secrets['ADMIN_PASSWORD']:
                 st.session_state.is_admin = True
                 st.success("Admin Unlocked")
                 st.rerun()
