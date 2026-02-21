@@ -237,13 +237,28 @@ def back_home():
   st.session_state.selected_id = None
   st.rerun()
 
+def upload_to_bucket(file, folder="uploads") -> str:
+  if file is None:
+    return ""
+
+  ext = file.name.split(".")[-1].lower() if "." in file.name else "jpg"
+  path = f"{folder}/{uuid.uuid4()}.{ext}"
+
+  sb_admin.storage.from_(BUCKET_NAME).upload(
+    path,
+    file.getvalue(),
+    file_options={"content-type": file.type, "upsert": True},
+  )
+
+  return sb_admin.storage.from_(BUCKET_NAME).get_public_url(path)
+
 # ---------------------------
 # Sidebar: Admin + Filters
 # ---------------------------
 with st.sidebar:
-  st.subheader("Admin")
+  st.subheader("Log In:")
   if not st.session_state.is_admin:
-    pw = st.text_input("Admin Password", type="password")
+    pw = st.text_input("Enter Password:", type="password")
     if st.button("Log in"):
       if pw == ADMIN_PASSWORD:
         st.session_state.is_admin = True
@@ -269,22 +284,18 @@ with st.sidebar:
 # Load posts once (after we know include_drafts)
 posts = fetch_posts(include_drafts=include_drafts)
 
-# Build filter options
-all_locations = sorted({(p.get("location") or "").strip() for p in posts if (p.get("location") or "").strip()})
-all_tags = sorted({t for p in posts for t in split_csv(p.get("tags") or "")})
+# Build title options
+all_titles = sorted({(p.get("title") or "").strip() for p in posts if (p.get("title") or "").strip()})
 
 with st.sidebar:
-  loc_choice = st.selectbox("Location", options=["All"] + all_locations)
-  tag_choice = st.selectbox("Tag", options=["All"] + all_tags)
+  title_choice = st.selectbox("Post title", options=["All"] + all_titles)
 
-# Apply filters
+# Apply filters (title + search)
 def matches(p: dict) -> bool:
-  if loc_choice != "All":
-    if (p.get("location") or "").strip() != loc_choice:
+  if title_choice != "All":
+    if (p.get("title") or "").strip() != title_choice:
       return False
-  if tag_choice != "All":
-    if tag_choice not in split_csv(p.get("tags") or ""):
-      return False
+
   if q_text.strip():
     q = q_text.strip().lower()
     blob = " ".join([
@@ -296,8 +307,8 @@ def matches(p: dict) -> bool:
     ]).lower()
     if q not in blob:
       return False
-  return True
 
+  return True
 posts_filtered = [p for p in posts if matches(p)]
 
 # ---------------------------
@@ -316,8 +327,9 @@ if st.session_state.is_admin and st.session_state.view == "home":
       new_date = st.date_input("Date", value=date.today())
       new_location = st.text_input("Location (optional)")
       new_tags = st.text_input("Tags (comma separated)", placeholder="food, museum, friends")
-      new_cover = st.text_input("Cover image URL (optional)")
-      new_gallery = st.text_input("Gallery image URLs (comma separated, optional)")
+      
+      cover_file = st.file_uploader("Cover photo (optional)", type=["png","jpg","jpeg","webp"])
+      gallery_files = st.file_uploader("Gallery photos (optional)", type=["png","jpg","jpeg","webp"], accept_multiple_files=True)
       new_content = st.text_area("Content", height=220)
 
       c1, c2 = st.columns(2)
@@ -327,6 +339,14 @@ if st.session_state.is_admin and st.session_state.view == "home":
         publish = st.form_submit_button("Publish")
 
       if save_draft or publish:
+        new_cover = upload_to_bucket(cover_file, folder="covers") if cover_file else ""
+
+gallery_urls = []
+if gallery_files:
+  for f in gallery_files:
+    gallery_urls.append(upload_to_bucket(f, folder="gallery"))
+
+new_gallery = ", ".join([u for u in gallery_urls if u])
         payload = {
           "id": str(uuid.uuid4()),
           "date": str(new_date),
@@ -448,4 +468,5 @@ else:
           open_post(p.get("id"))
 
         st.markdown('</div></div>', unsafe_allow_html=True)
-        
+
+BUCKET_NAME = 'photos'
