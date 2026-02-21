@@ -241,9 +241,9 @@ def back_home():
 # Sidebar: Admin + Filters
 # ---------------------------
 with st.sidebar:
-  st.subheader("Admin")
+  st.subheader("Log In:")
   if not st.session_state.is_admin:
-    pw = st.text_input("Admin Password", type="password")
+    pw = st.text_input("Enter Password", type="password")
     if st.button("Log in"):
       if pw == ADMIN_PASSWORD:
         st.session_state.is_admin = True
