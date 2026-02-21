@@ -269,22 +269,18 @@ with st.sidebar:
 # Load posts once (after we know include_drafts)
 posts = fetch_posts(include_drafts=include_drafts)
 
-# Build filter options
-all_locations = sorted({(p.get("location") or "").strip() for p in posts if (p.get("location") or "").strip()})
-all_tags = sorted({t for p in posts for t in split_csv(p.get("tags") or "")})
+# Build title options
+all_titles = sorted({(p.get("title") or "").strip() for p in posts if (p.get("title") or "").strip()})
 
 with st.sidebar:
-  loc_choice = st.selectbox("Location", options=["All"] + all_locations)
-  tag_choice = st.selectbox("Tag", options=["All"] + all_tags)
+  title_choice = st.selectbox("Post title", options=["All"] + all_titles)
 
-# Apply filters
+# Apply filters (title + search)
 def matches(p: dict) -> bool:
-  if loc_choice != "All":
-    if (p.get("location") or "").strip() != loc_choice:
+  if title_choice != "All":
+    if (p.get("title") or "").strip() != title_choice:
       return False
-  if tag_choice != "All":
-    if tag_choice not in split_csv(p.get("tags") or ""):
-      return False
+
   if q_text.strip():
     q = q_text.strip().lower()
     blob = " ".join([
@@ -296,6 +292,7 @@ def matches(p: dict) -> bool:
     ]).lower()
     if q not in blob:
       return False
+
   return True
 
 posts_filtered = [p for p in posts if matches(p)]
