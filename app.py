@@ -31,27 +31,20 @@ html, body, [class*="css"]  {
   color: var(--ink);
 }
 
-.stApp {
-  background: var(--bg);
-}
+.stApp { background: var(--bg); }
 
-/* Centered container feel */
 .block-container {
   padding-top: 2.2rem;
   padding-bottom: 3rem;
   max-width: 1100px;
 }
 
-/* Sidebar polish */
 section[data-testid="stSidebar"]{
   background: rgba(255,255,255,0.55);
   border-right: 1px solid var(--line);
 }
-section[data-testid="stSidebar"] .block-container{
-  padding-top: 1.6rem;
-}
+section[data-testid="stSidebar"] .block-container{ padding-top: 1.6rem; }
 
-/* Buttons */
 .stButton>button, .stDownloadButton>button {
   border-radius: 999px;
   border: 1px solid var(--line);
@@ -64,12 +57,10 @@ section[data-testid="stSidebar"] .block-container{
   transform: translateY(-1px);
 }
 
-/* Inputs */
 .stTextInput input, .stTextArea textarea, .stSelectbox div[data-baseweb="select"] > div {
   border-radius: 14px;
 }
 
-/* Hero title */
 .hero-title {
   font-family: 'Playfair Display', serif;
   font-weight: 700;
@@ -84,7 +75,6 @@ section[data-testid="stSidebar"] .block-container{
   margin-bottom: 1.5rem;
 }
 
-/* Card styles */
 .card {
   background: var(--card);
   border: 1px solid var(--line);
@@ -97,19 +87,15 @@ section[data-testid="stSidebar"] .block-container{
   transform: translateY(-3px);
   box-shadow: 0 16px 44px rgba(31,35,48,0.12);
 }
-.card-body{
-  padding: 14px 16px 16px 16px;
-}
+.card-body{ padding: 14px 16px 16px 16px; }
 .card-title{
   font-family: 'Playfair Display', serif;
   font-weight: 600;
   font-size: 1.15rem;
   margin: 0.1rem 0 0.25rem 0;
 }
-.card-meta{
-  color: var(--muted);
-  font-size: 0.9rem;
-}
+.card-meta{ color: var(--muted); font-size: 0.9rem; }
+
 .pill{
   display: inline-block;
   padding: 6px 10px;
@@ -122,7 +108,6 @@ section[data-testid="stSidebar"] .block-container{
   color: var(--ink);
 }
 
-/* Featured */
 .feature-wrap{
   background: var(--card);
   border: 1px solid var(--line);
@@ -131,19 +116,15 @@ section[data-testid="stSidebar"] .block-container{
   overflow: hidden;
   margin-bottom: 1.25rem;
 }
-.feature-body{
-  padding: 16px 18px 18px 18px;
-}
+.feature-body{ padding: 16px 18px 18px 18px; }
 .feature-title{
   font-family: 'Playfair Display', serif;
   font-weight: 700;
   font-size: 1.7rem;
   margin: 0 0 0.25rem 0;
 }
-.feature-meta{
-  color: var(--muted);
-  margin-bottom: 0.75rem;
-}
+.feature-meta{ color: var(--muted); margin-bottom: 0.75rem; }
+
 hr.soft {
   border: 0;
   height: 1px;
@@ -151,17 +132,13 @@ hr.soft {
   margin: 1.2rem 0;
 }
 
-/* Post view */
 .post-title{
   font-family: 'Playfair Display', serif;
   font-weight: 700;
   font-size: 2.2rem;
   margin-bottom: 0.25rem;
 }
-.post-meta{
-  color: var(--muted);
-  margin-bottom: 1rem;
-}
+.post-meta{ color: var(--muted); margin-bottom: 1rem; }
 </style>
 """,
     unsafe_allow_html=True,
@@ -176,6 +153,7 @@ SUPABASE_SERVICE_KEY = st.secrets["SUPABASE_SERVICE_KEY"]
 ADMIN_PASSWORD = st.secrets["ADMIN_PASSWORD"]
 
 TABLE_NAME = "Posts"
+BUCKET_NAME = "photos"  # must match your Supabase Storage bucket name
 
 sb_public = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 sb_admin = create_client(SUPABASE_URL, SUPABASE_SERVICE_KEY)
@@ -202,7 +180,6 @@ def get_cover_url(p: dict) -> str | None:
   cover = p.get("cover_image_url")
   if cover:
     return cover
-  # fallback: first gallery url
   gallery = p.get("gallery_image_urls")
   urls = split_csv(gallery)
   return urls[0] if urls else None
@@ -238,6 +215,10 @@ def back_home():
   st.rerun()
 
 def upload_to_bucket(file, folder="uploads") -> str:
+  """
+  Uploads a Streamlit UploadedFile to Supabase Storage and returns a public URL.
+  Assumes the bucket is PUBLIC.
+  """
   if file is None:
     return ""
 
@@ -256,9 +237,9 @@ def upload_to_bucket(file, folder="uploads") -> str:
 # Sidebar: Admin + Filters
 # ---------------------------
 with st.sidebar:
-  st.subheader("Log In:")
+  st.subheader("Log In")
   if not st.session_state.is_admin:
-    pw = st.text_input("Enter Password:", type="password")
+    pw = st.text_input("Enter Password", type="password")
     if st.button("Log in"):
       if pw == ADMIN_PASSWORD:
         st.session_state.is_admin = True
@@ -281,16 +262,14 @@ with st.sidebar:
   st.subheader("Search & filter")
   q_text = st.text_input("Search", placeholder="Try: Rome, museum, gelato…")
 
-# Load posts once (after we know include_drafts)
+# Load posts once
 posts = fetch_posts(include_drafts=include_drafts)
 
-# Build title options
+# Title filter
 all_titles = sorted({(p.get("title") or "").strip() for p in posts if (p.get("title") or "").strip()})
-
 with st.sidebar:
   title_choice = st.selectbox("Post title", options=["All"] + all_titles)
 
-# Apply filters (title + search)
 def matches(p: dict) -> bool:
   if title_choice != "All":
     if (p.get("title") or "").strip() != title_choice:
@@ -309,6 +288,7 @@ def matches(p: dict) -> bool:
       return False
 
   return True
+
 posts_filtered = [p for p in posts if matches(p)]
 
 # ---------------------------
@@ -318,8 +298,7 @@ st.markdown('<div class="hero-title">Emily’s Travel Journal</div>', unsafe_all
 st.markdown('<p class="hero-sub">Follow along with my adventures abroad</p>', unsafe_allow_html=True)
 
 # ---------------------------
-# ---------------------------
-# Admin: New post form (optional, lives on home)
+# Admin: New post form
 # ---------------------------
 if st.session_state.is_admin and st.session_state.view == "home":
   with st.expander("✍️ Create a new post", expanded=False):
@@ -329,13 +308,10 @@ if st.session_state.is_admin and st.session_state.view == "home":
       new_location = st.text_input("Location (optional)")
       new_tags = st.text_input("Tags (comma separated)", placeholder="food, museum, friends")
 
-      cover_file = st.file_uploader(
-        "Cover photo (optional)",
-        type=["png", "jpg", "jpeg", "webp"]
-      )
+      cover_file = st.file_uploader("Cover photo (optional)", type=["png","jpg","jpeg","webp"])
       gallery_files = st.file_uploader(
         "Gallery photos (optional)",
-        type=["png", "jpg", "jpeg", "webp"],
+        type=["png","jpg","jpeg","webp"],
         accept_multiple_files=True
       )
 
@@ -353,9 +329,11 @@ if st.session_state.is_admin and st.session_state.view == "home":
         gallery_urls = []
         if gallery_files:
           for f in gallery_files:
-            gallery_urls.append(upload_to_bucket(f, folder="gallery"))
+            url = upload_to_bucket(f, folder="gallery")
+            if url:
+              gallery_urls.append(url)
 
-        new_gallery = ", ".join([u for u in gallery_urls if u])
+        new_gallery = ", ".join(gallery_urls)
 
         payload = {
           "id": str(uuid.uuid4()),
@@ -373,21 +351,38 @@ if st.session_state.is_admin and st.session_state.view == "home":
         st.success("Saved ✅")
         st.rerun()
 
-    # Content
+# ---------------------------
+# Views
+# ---------------------------
+if st.session_state.view == "post":
+  selected = next((p for p in posts if p.get("id") == st.session_state.selected_id), None)
+
+  if not selected:
+    st.warning("That post isn't available (it may be a draft, or was removed).")
+    if st.button("← Back"):
+      back_home()
+  else:
+    if st.button("← Back to home"):
+      back_home()
+
+    st.markdown(f'<div class="post-title">{selected.get("title") or "(untitled)"}</div>', unsafe_allow_html=True)
+    st.markdown(f'<div class="post-meta">{post_meta_line(selected)}</div>', unsafe_allow_html=True)
+
+    cover = get_cover_url(selected)
+    if cover:
+      st.image(cover, use_container_width=True)
+
     st.markdown(selected.get("content") or "")
 
-    # Gallery (optional)
     gallery_urls = split_csv(selected.get("gallery_image_urls") or "")
     if gallery_urls:
       st.markdown('<hr class="soft" />', unsafe_allow_html=True)
       st.subheader("Photos")
-      # pretty gallery grid
       cols = st.columns(3)
       for i, url in enumerate(gallery_urls):
         with cols[i % 3]:
           st.image(url, use_container_width=True)
 
-    # Tags / location
     loc = (selected.get("location") or "").strip()
     tags = split_csv(selected.get("tags") or "")
     pills = []
@@ -400,14 +395,13 @@ if st.session_state.is_admin and st.session_state.view == "home":
       st.write(" ".join([f'<span class="pill">{p}</span>' for p in pills]), unsafe_allow_html=True)
 
 else:
-  # HOME view: Featured + grid of cards
+  # HOME view
   if not posts_filtered:
     st.info("No posts match your filters yet.")
   else:
     featured = posts_filtered[0]
     cover = get_cover_url(featured)
 
-    # Featured block
     st.markdown('<div class="feature-wrap">', unsafe_allow_html=True)
     if cover:
       st.image(cover, use_container_width=True)
@@ -428,10 +422,8 @@ else:
 
     st.markdown('<hr class="soft" />', unsafe_allow_html=True)
 
-    # Grid of cards
     st.subheader("All posts")
 
-    # 3-column grid (drops to 2/1 depending on screen)
     cols = st.columns(3)
     for i, p in enumerate(posts_filtered):
       cover = get_cover_url(p)
@@ -443,13 +435,11 @@ else:
         st.markdown(f'<div class="card-title">{p.get("title") or "(untitled)"}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="card-meta">{post_meta_line(p)}</div>', unsafe_allow_html=True)
 
-        # tags pills (small)
         tags = split_csv(p.get("tags") or "")
         if tags:
           pills = "".join([f'<span class="pill">{t}</span>' for t in tags[:3]])
           st.markdown(pills, unsafe_allow_html=True)
 
-        # draft badge for admin
         if st.session_state.is_admin and p.get("is_published") is False:
           st.markdown('<div class="card-meta" style="margin-top:8px;">📝 Draft</div>', unsafe_allow_html=True)
 
@@ -457,5 +447,4 @@ else:
           open_post(p.get("id"))
 
         st.markdown('</div></div>', unsafe_allow_html=True)
-
-BUCKET_NAME = 'photos'
+        
